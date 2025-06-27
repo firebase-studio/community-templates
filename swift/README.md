@@ -2,7 +2,7 @@
 Created by [Peter Friese](https://peterfriese.dev/)
 
 ## Try it out!
-<a href="https://idx.google.com/new?template=https://github.com/peterfriese/community-templates/tree/main/swift">
+<a href="https://idx.google.com/new?template=https://github.com/peterfriese/community-templates/tree/peterfriese/swift/swift">
   <picture>
     <source
       media="(prefers-color-scheme: dark)"
