@@ -1,0 +1,23 @@
+{
+    "name": "Swift",
+    "description": "Start a simple Swift backend or a full-stack app",
+    "categories": [
+      "Backend"
+    ],
+    "icon": "",
+    "website": "https://www.swift.org/",    
+    "publisher": "Peter Friese",
+    "params": [
+      {
+        "id": "environment",
+        "name": "Environment",
+        "type": "enum",
+        "default": "vapor",
+        "options": {
+          "vapor": "Vapor",
+          "cli": "Command Line App",
+          "api": "API Server"
+        }
+      }
+    ]
+  }
