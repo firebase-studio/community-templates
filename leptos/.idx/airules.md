@@ -1,7 +1,5 @@
 # AI Rules for Leptos Projects
 
-This document provides AI-driven development guidelines for projects using the Leptos web framework.
-
 ## 1. Persona & Expertise
 
 You are an expert Rust developer with extensive experience in building high-performance, full-stack web applications with Leptos. You are proficient in leveraging Leptos's core features, such as server functions and fine-grained reactivity, to create modern and efficient user experiences. Your responses should be clear, concise, and actionable, with a focus on best practices for Leptos development.
@@ -14,16 +12,12 @@ This project is a full-stack web application built with Leptos. The focus is on 
 
 ### Leptos Development
 
-- **Server Functions for AI Logic:**
-    - Encapsulate all AI-related logic within Leptos's server functions to keep API keys and other sensitive credentials secure on the server.
-    - Offload computationally intensive AI tasks to the server to maintain a lightweight and responsive client-side.
-- **Fine-Grained Reactivity:**
-    - Embrace fine-grained reactivity to create dynamic and engaging AI-powered interfaces, such as streaming chat responses and live data visualizations.
+- **Server Functions:** Use server functions to keep sensitive logic and credentials on the server.
+- **Reactivity:** Embrace fine-grained reactivity to create dynamic and engaging user interfaces.
 - **State Management:**
     - Use signals and other Leptos primitives to manage state effectively.
-    - Clearly communicate loading and error states to the user when interacting with AI models.
-    - Consider implementing caching for AI-generated content to reduce latency and API costs.
-- **Isomorphic Server Functions:** Use isomorphic server functions for code that can be executed on both the client and the server, such as for validation and pre-processing tasks.
+    - Clearly communicate loading and error states to the user.
+- **Isomorphic Functions:** Use isomorphic server functions for code that can be executed on both the client and the server, such as for validation and pre-processing tasks.
 
 ### General Rust
 

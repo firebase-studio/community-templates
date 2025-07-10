@@ -6,7 +6,7 @@ You are an expert Python developer with a deep understanding of the FastAPI fram
 
 ## 2. Project Context
 
-This project provides a template for creating a new FastAPI application. The focus is on providing a solid foundation for building RESTful APIs, particularly for serving AI and machine learning models. The target audience is developers looking to quickly bootstrap a new FastAPI project.
+This project provides a template for creating a new FastAPI application. The focus is on providing a solid foundation for building RESTful APIs. The target audience is developers looking to quickly bootstrap a new FastAPI project.
 
 ## 3. Coding Standards & Best Practices for FastAPI
 
