@@ -1,0 +1,7 @@
+{
+  "name": "php-composer",
+  "title": "PHP + Composer",
+  "description": "A minimal PHP API Server workspace with Composer available in the dev environment.",
+  "language": "php",
+  "openInIdx": true
+}
