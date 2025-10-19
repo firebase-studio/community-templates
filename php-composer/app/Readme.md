@@ -9,8 +9,15 @@ This template builds upon the standard PHP template by including Composer, allow
 *   **PHP**: The latest stable version provided by the IDX environment.
 *   **Composer**: The de facto dependency manager for PHP.
 
+
 To test the service locally, run:
 
 ```sh
 php -S localhost:3000 index.php
+```
+
+To add dependencies you can :
+
+```sh
+composer require {dependecy}
 ```
