@@ -39,7 +39,7 @@ idx-template \
     chmod -R +w "$WS_NAME"
     
     file="$WS_NAME/src/index.ts"
-    sed -i 's/const port = 3000/const port = parseInt(process.env.PORT || '9002', 10)/g' "$file"
+    sed -i "s/port: 3000/port: parseInt(process.env.PORT || '9002', 10)/g" "$file"
 
     mv "$WS_NAME" "$out"
     cd "$out"; npm install --package-lock-only --ignore-scripts
