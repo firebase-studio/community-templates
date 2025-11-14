@@ -2,11 +2,11 @@
 # see: https://developers.google.com/idx/guides/customize-idx-env
 { pkgs, ... }: {
   # Which nixpkgs channel to use.
-  channel = "stable-24.05"; # or "unstable"
+  channel = "stable-25.05"; # or "unstable"
   # Use https://search.nixos.org/packages to find packages
   packages = [
-    pkgs.python3
-    pkgs.python311Packages.pip
+    pkgs.python313
+    pkgs.python313Packages.pip
   ];
   # Sets environment variables in the workspace
   env = {};
@@ -19,9 +19,11 @@
       # Runs when a workspace is first created with this `dev.nix` file
       onCreate = {
         create-venv = ''
-          python -m venv .venv
+          # Always start fresh
+          rm -rf .venv
+          python3 -m venv .venv
           source .venv/bin/activate
-          pip install -r requirements.txt
+          pip install --upgrade -r requirements.txt
         '';
         # Open editors for the following files by default, if they exist:
         default.openFiles = [ "main.py" ];

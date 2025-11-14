@@ -3,4 +3,4 @@ pip
 autopep8
 
 # App
-openai==1.11.1
+openai
