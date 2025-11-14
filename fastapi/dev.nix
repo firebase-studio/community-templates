@@ -1,12 +1,12 @@
 { pkgs, ... }: {
   # Which nixpkgs channel to use.
-  channel = "stable-24.05"; # or "unstable"
+  channel = "stable-25.05"; # or "unstable"
   # Use https://search.nixos.org/packages to find packages
   packages = [
-    pkgs.python3
-    pkgs.python311Packages.pip
-    pkgs.python311Packages.fastapi
-    pkgs.python311Packages.uvicorn
+    pkgs.python314
+    pkgs.python313Packages.pip
+    pkgs.python313Packages.fastapi
+    pkgs.python313Packages.uvicorn
   ];
   # Sets environment variables in the workspace
   env = {};
