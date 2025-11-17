@@ -8,8 +8,7 @@
     mkdir "$out"
     chmod +w "$out"
 
-    # Copy the entire contents of the 'dev' directory. 
-    # The source path `${./dev}/.` refers to the contents of the 'dev' directory.
+    # Copy the entire contents of the 'dev' directory.
     cp -r ${./dev}/. "$out"
 
     # Recursively grant write permissions to all copied files and directories.
@@ -22,7 +21,9 @@
     rm -f go.mod go.sum
 
     # Initialize a new go module using the parameter from idx-template.json.
-    go mod init {{.module}}
+    # We assign it to a shell variable to make the script more robust.
+    MODULE_NAME="{{.module}}"
+    go mod init "$MODULE_NAME"
 
     # Tidy the dependencies.
     go mod tidy
