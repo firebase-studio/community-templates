@@ -5,7 +5,7 @@
   channel = "stable-25.05"; # or "unstable"
   # Use https://search.nixos.org/packages to find packages
   packages = [
-    pkgs.go
+    pkgs.go_1_24
     pkgs.sqlite
     pkgs.nodejs_20
     pkgs.nodePackages.nodemon
