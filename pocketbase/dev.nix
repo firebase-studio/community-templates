@@ -21,7 +21,7 @@
       onCreate = {
         # Open editors for the following files by default, if they exist:
         default.openFiles = [ "main.go" ];
-        installDependencies = "go get";
+        installDependencies = "go get && go mod tidy";
       };
     };
     # Enable previews and customize configuration
