@@ -17,7 +17,7 @@ description: A simple Dart project. # Add your project description
 version: 1.0.0
 
 environment:
-  sdk: '>=2.18.0 <3.0.0' # Specify the Dart SDK version you need
+  sdk: '>=3.7.3 <4.0.0' # Specify the Dart SDK version you need
 
 dependencies:
   path: ^1.8.0 # Add the path package dependency
