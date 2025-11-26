@@ -1,4 +1,5 @@
 {pkgs, template ? "web", ...}: {
+    channel = "stable-25.05";
     packages = [
         pkgs.curl
         pkgs.gnutar
