@@ -2,7 +2,7 @@
 # see: https://developers.google.com/idx/guides/customize-idx-env
 { pkgs, ... }: {
   # Which nixpkgs channel to use.
-  channel = "stable-25.05"; # or "unstable"
+  channel = "stable-24.05"; # or "unstable"
   # Use https://search.nixos.org/packages to find packages
   packages = [
     pkgs.gcc
@@ -41,6 +41,9 @@
           ln -s /usr/lib/libldap.so .venv/lib/libldap_r.so
           source .venv/bin/activate
           NIX_LDFLAGS="$NIX_LDFLAGS -L$VIRTUAL_ENV/lib" pip install -r .idx/.data/odoo/requirements.txt
+          python -m pip install urllib3 werkzeug num2words pytz passlib
+          mkdir -p /home/user/odoo/custom_addons
+          touch odoo.conf
           odoo-bin --save --stop-after-init
           mv ../.odoorc odoo.conf
           sed -i                                                                 \
