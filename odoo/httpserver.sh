@@ -1,3 +1,3 @@
-#!/bin/bash
+#!/bin/sh
 source .venv/bin/activate
-odoo-bin --config odoo.conf --http-port $1
+odoo-bin server --http-port "$1"
