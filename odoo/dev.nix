@@ -39,7 +39,6 @@
           NIX_LDFLAGS="$NIX_LDFLAGS -L$VIRTUAL_ENV/lib" pip install -r .idx/.data/odoo/requirements.txt
           python -m pip install urllib3 werkzeug num2words pytz passlib
           mkdir -p /home/user/odoo/custom_addons
-          touch odoo.conf 
           odoo-bin --save --stop-after-init
           mv ../.odoorc odoo.conf
           sed -i                                                                 \
