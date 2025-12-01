@@ -38,7 +38,6 @@
           sed -i '/^python-ldap==/d' .idx/.data/odoo/requirements.txt
           NIX_LDFLAGS="$NIX_LDFLAGS -L$VIRTUAL_ENV/lib" pip install -r .idx/.data/odoo/requirements.txt
           mkdir -p /home/user/$WS_NAME/custom_addons
-        
           odoo-bin --save --stop-after-init
           mv ../.odoorc odoo.conf
           sed -i                                                                 \
