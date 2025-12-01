@@ -49,7 +49,7 @@
           .idx/dev.nix
 
       
-      mkdir -p /home/user/odoo/custom_addons
+      mkdir custom_addons
 
       cd ..
       chmod -R +w "$out"
