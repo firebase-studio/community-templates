@@ -16,7 +16,7 @@
 
 { pkgs, template ? "js", ts ? false, ... }: {
   packages = [
-    pkgs.nodejs_20
+    pkgs.nodejs_21
     pkgs.python3
     pkgs.python311Packages.pip
     pkgs.python311Packages.fastapi

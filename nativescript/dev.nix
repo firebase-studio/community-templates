@@ -2,13 +2,13 @@
 { pkgs, ... }: {
   channel = "stable-24.05";
   packages = [
-    pkgs.nodejs_20
+    pkgs.nodejs_21
     pkgs.jdk17
     pkgs.androidenv.androidSdk
     pkgs.androidenv.platform-tools
     pkgs.androidenv.build-tools
     pkgs.androidenv.ndk
-    pkgs.nodejs_20.pkgs.pnpm
+    pkgs.nodejs_21.pkgs.pnpm
   ];
   env = {
     ANDROID_HOME = "${pkgs.androidenv.androidSdk}";
