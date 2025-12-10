@@ -14,6 +14,14 @@
  limitations under the License.
  */
 
+/*
+idx-template \
+--output-dir /home/user/idx/hono-test \
+-a '{ "manager": "bun" }' \
+--workspace-name 'app' \
+/home/user/idx/hono \
+--failure-report
+*/
 { pkgs, manager ? "npm", ... }: {
   packages = [
     pkgs.nodejs_20
@@ -30,34 +38,8 @@
     cp -rf ${./dev.nix} "$WS_NAME/.idx/dev.nix"
     chmod -R +w "$WS_NAME"
     
-    # Overwrite src/index.ts with content that correctly handles port assignment
-    cat > "$WS_NAME/src/index.ts" << 'EOF'
-import { serve } from '@hono/node-server'
-import { Hono } from 'hono'
-
-const app = new Hono()
-
-app.get('/', (c) => {
-  return c.text('Hello Hono!')
-})
-
-const portArgIndex = process.argv.indexOf('--port')
-#let port = 3000;
-#if (portArgIndex !== -1) {
-#  port = parseInt(process.argv[portArgIndex + 1])
-#} else if (process.env.PORT) {
- # port = parseInt(process.env.PORT)
-#}
-const portIndex = process.argv.indexOf('--port');
-const port = portIndex > -1 ? parseInt(process.argv[portIndex + 1], 10) : 3000;
-
-serve({
-  fetch: app.fetch,
-  port: port
-}, (info) => {
-  console.log(`Server is running on http://localhost:\${info.port}`)
-})
-EOF
+    file="$WS_NAME/src/index.ts"
+    sed -i "s/port: 3000/port: parseInt(process.env.PORT || '9002', 10)/g" "$file"
 
     mv "$WS_NAME" "$out"
     cd "$out"; npm install --package-lock-only --ignore-scripts
