@@ -27,8 +27,14 @@
     mkdir -p "$out/.idx/"
     cp -rf ${./dev.nix} "$out/.idx/dev.nix"
     shopt -s dotglob; cp -r ${./dev}/* "$out"
-    npm install nativescript@8.6.1
-    ./node_modules/nativescript/bin/ns create example --${template} ${if ts then "--ts" else ""} --path "$out"
+    if [ "${template}" = "svelte" ]; then
+       npm config set legacy-peer-deps true
+       npm install --save-dev nativescript@8.6.1
+       npx ns create example --template @nativescript/template-blank-svelte --path "$out"
+    else
+       npm install nativescript@8.6.1
+       ./node_modules/nativescript/bin/ns create example --${template} ${if ts then "--ts" else ""} --path "$out"
+    fi
     mv "$out/example"/* "$out/"
     rmdir "$out/example"
     chmod -R +w "$out"
