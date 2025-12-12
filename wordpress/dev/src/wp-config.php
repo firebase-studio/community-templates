@@ -38,7 +38,12 @@ if (!function_exists('getenv_docker')) {
 		}
 	}
 }
-
+if (isset($_ENV['FLY_ALLOC_ID'])) {
+    $host = $_SERVER['HTTP_HOST'];
+    define('WP_HOME', 'https://'.$host);
+    define('WP_SITEURL', 'https://'.$host);
+    $_SERVER['HTTPS'] = 'on';
+}
 // ** Database settings - You can get this info from your web host ** //
 /** The name of the database for WordPress */
 define( 'DB_NAME', getenv_docker('WORDPRESS_DB_NAME', 'wordpress') );
@@ -116,8 +121,6 @@ define( 'WP_DEBUG', !!getenv_docker('WORDPRESS_DEBUG', '') );
 if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strpos($_SERVER['HTTP_X_FORWARDED_PROTO'], 'https') !== false) {
 	$_SERVER['HTTPS'] = 'on';
 }
-if (isset($_SERVER['HTTP_X_FORWARDED_HOST'])) {    
-	$_SERVER['HTTP_HOST'] = $_SERVER['HTTP_X_FORWARDED_HOST'];}
 // (we include this by default because reverse proxying is extremely common in container environments)
 
 if ($configExtra = getenv_docker('WORDPRESS_CONFIG_EXTRA', '')) {
