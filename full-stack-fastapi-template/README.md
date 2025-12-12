@@ -6,25 +6,24 @@
 ## Dependencies
 
 The project requires:
-
 - Python 3.x
 - FastAPI
 - Docker and Docker Compose
 - PostgreSQL
 
 ## Installation
-<a href="https://idx.google.com/import?url=https%3A%2F%2Fgithub.com%2Fproject-idx%2Fcommunity-templates%2Ftree%2Fmain%2Ffull-stack-fastapi-template">
+<a href="https://studio.firebase.google.com/new?template=https://github.com/project-idx/community-templates/tree/main/full-stack-fastapi-template">
   <picture>
     <source
       media="(prefers-color-scheme: dark)"
-      srcset="https://cdn.idx.dev/btn/open_dark_32.svg">
+      srcset="https://cdn.firebasestudio.dev/btn/open_dark_32.svg">
     <source
       media="(prefers-color-scheme: light)"
-      srcset="https://cdn.idx.dev/btn/open_light_32.svg">
+      srcset="https://cdn.firebasestudio.dev/btn/open_light_32.svg">
     <img
       height="32"
-      alt="Open in IDX"
-      src="https://cdn.idx.dev/btn/open_purple_32.svg">
+      alt="Open in Firebase Studio"
+      src="https://cdn.firebasestudio.dev/btn/open_blue_32.svg">
   </picture>
 </a>
 
