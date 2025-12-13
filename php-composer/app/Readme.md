@@ -1,23 +1,26 @@
-# PHP + Composer Template for Project IDX
+# PHP + Composer
 
-This is a community template for [Project IDX](https://idx.dev/) that provides a ready-to-use PHP API development environment with Composer for dependency management.
+Created By: Shaik Sahil Rizwan
 
-This template builds upon the standard PHP template by including Composer, allowing you to easily manage your project's dependencies.
+# About
+This repo is a template for bootstrapping a PHP API Server with Composer dependency management on Firebase Studio
 
-## What's Included?
+# Try it out
+<a href="https://idx.google.com/new?template=https://github.com/firebase-studio/community-templates/tree/main/php-composer">
+  
+</a>
 
-*   **PHP**: The latest stable version provided by the IDX environment.
-*   **Composer**: The de facto dependency manager for PHP.
+## Features
+- PHP development environment pre-configured
+- Composer for dependency management
+- Ready-to-use API server setup
+- Minimal configuration required
 
+## Getting Started
+Once you open the template, you can start adding dependencies immediately:
 
-To test the service locally, run:
-
-```sh
-php -S localhost:3000 index.php
+```bash
+composer require <package-name>
 ```
 
-To add dependencies you can :
-
-```sh
-composer require {dependecy}
-```
+Start developing your PHP API right away with full Composer support! 
