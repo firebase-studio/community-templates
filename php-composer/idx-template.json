@@ -1,7 +1,12 @@
 {
-  "name": "php-composer",
-  "title": "PHP + Composer",
-  "description": "A minimal PHP API Server workspace with Composer available in the dev environment.",
-  "language": "php",
-  "openInIdx": true
-}
+    "name": "PHP Composer",
+    "description": "PHP Workspace with Composer, a dependency manager for PHP",
+    "categories": [
+      "API Development",
+      "Web app",
+      "Backend"
+    ],
+    "icon": "",
+    "website": ["https://www.php.net/", "https://getcomposer.org/"],
+    "publisher": "Shaik Sahil Rizwan"
+  }
