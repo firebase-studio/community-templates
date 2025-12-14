@@ -1,0 +1,12 @@
+{
+  "name": "C-Tempalte",
+  "description": "A barebones C project with GCC, Make, and GDB configured.",
+  "categories": [
+    "Systems",
+    "Backend",
+    "Console"
+  ],
+  "icon": "https://upload.wikimedia.org/wikipedia/commons/1/18/C_Programming_Language.svg",
+  "website": "https://gcc.gnu.org/",
+  "publisher": "shaiksahilrizwan"
+}
