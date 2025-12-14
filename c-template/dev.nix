@@ -14,6 +14,7 @@
     extensions = [
       "ms-vscode.cpptools"
       "ms-vscode.cpptools-extension-pack"
+      "danielpinto8zz6.c-cpp-compile-run"
     ];
     
     workspace = {
