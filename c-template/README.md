@@ -1,6 +1,6 @@
 # Simple C Project
 
-Created By: @shaiksahilrizwan
+Created By: <a href="https://github.com/shaiksahilrizwan">Shaik Sahil Rizwan</a>
 
 # About
 This repo is a template for bootstrapping a simple C application on Project IDX. It comes pre-configured with GCC and GDB.
