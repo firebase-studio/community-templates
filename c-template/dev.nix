@@ -19,7 +19,7 @@
     workspace = {
       onCreate = {
         # Optional: Compile the project automatically when the workspace is created
-        build = "gcc main.c -o app"; 
+        buildAndRun = "gcc main.c -o app && ./app";  
       };
     };
   };
