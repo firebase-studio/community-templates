@@ -1,0 +1,11 @@
+{
+    "name": "Lean 4",
+    "description": "An IDX template for building projects in Lean 4.",
+    "categories": [
+      "Theorem Proving",
+      "Formal Verification"
+    ],
+    "icon": "https://lean-lang.org/static/lean_logo.svg",
+    "website": "https://lean-lang.org/",
+    "publisher": "Dhruv Rajan"
+  }
