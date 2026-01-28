@@ -26,33 +26,24 @@
       onCreate = {
         default.openFiles = [ ];
         env-setup = ''
-          set -eo pipefail
-          PROJECT_DIR="$PWD"
-          pushd "$HOME"
-          cat > ~/.bashrc <<BASHRC
-          unset PROMPT_COMMAND
-          __vsc_prompt_cmd_original() { :; }
-          unset -f command_not_found_handle 2>/dev/null || true
-          # auto-export env vars from the original project dir
-          if [ -d "$PROJECT_DIR" ]; then
-            set -a
-            [ -f "$PROJECT_DIR/default.env" ] && . "$PROJECT_DIR/default.env"
-            [ -f "$PROJECT_DIR/.env" ] && . "$PROJECT_DIR/.env"
-            set +a
-          fi
-          chmod -R a+x $PROJECT_DIR/scripts
-          BASHRC
-          popd
+          chmod -R a+x scripts
+          ./scripts/bash_setup.sh
           exit
         '';
       };
       # Runs when a workspace restarted
       onStart = {
         choicely-config-update = ''
+          chmod -R a+x scripts
+          ./scripts/bash_setup.sh
+          source "$HOME/.bashrc"
           ./scripts/update_env.sh
         '';
         web-rn = ''
           set -eo pipefail
+          chmod -R a+x scripts
+          ./scripts/bash_setup.sh
+          source "$HOME/.bashrc"
           echo -e "\033[1;33mStarting web development server...\033[0m"
           npm run web
         '';
@@ -66,7 +57,7 @@
           command = [
             "bash"
             "-lc"
-            "source \"$HOME/.bashrc\" && npm run preview -- \"$PORT\""
+            "chmod -R a+x scripts && ./scripts/bash_setup.sh && source \"$HOME/.bashrc\" && npm run preview -- \"$PORT\""
           ];
           manager = "web";
         };
