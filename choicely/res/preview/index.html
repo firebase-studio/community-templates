@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>Choicely Preview</title>
+    <link rel="stylesheet" href="./styles.css"/>
+</head>
+
+<body>
+<div class="corner-actions">
+    <a id="pushChanges" class="btn" href="#" role="button">Push changes to app</a>
+</div>
+
+<div class="stack">
+    <div class="header">
+        <h1>Preview your Choicely mobile app</h1>
+        <p>Scan the QR code to preview on a real device.</p>
+        <div class="actions">
+            <a id="showQr" class="btn secondary" href="#" role="button">Show QR</a>
+            <a class="btn secondary" href="https://studio.choicely.com" target="_blank" rel="noopener noreferrer">
+                Open in Choicely Studio
+            </a>
+        </div>
+    </div>
+
+    <div class="phone" role="region" aria-label="Phone preview frame">
+        <div class="screen">
+            <div id="err" class="error" role="alert" aria-live="polite">
+                <div class="box">
+                    <p class="title">Missing <code>CHOICELY_APP_KEY</code></p>
+                    <p class="hint">config.js was not generated (or it still contains the placeholder).</p>
+                </div>
+            </div>
+            <iframe id="w" title="Choicely Widget" allow="fullscreen"></iframe>
+        </div>
+    </div>
+</div>
+
+<div id="qrOverlay" class="qr-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-label="QR Code">
+    <div class="qr-backdrop" data-close="true"></div>
+
+    <div class="qr-modal" role="document">
+        <button class="qr-close" type="button" aria-label="Close" data-close="true">×</button>
+
+        <p class="qr-title">
+            Scan the QR code on your mobile device to download the app on your phone.
+        </p>
+
+        <div id="qrStatus" class="qr-status">
+            <span class="spinner" aria-hidden="true"></span>
+            <span id="qrStatusText">Loading QR…</span>
+        </div>
+
+        <img id="qrImg" class="qr-img" src="./qr.png" alt="QR code" hidden/>
+    </div>
+</div>
+
+<script src="./config.js"></script>
+
+<script>
+  const queryParams = new URLSearchParams(window.location.search)
+  const getQueryParam = (name) => queryParams.get(name)
+
+  const wak =
+    window.__CHOICELY_APP_KEY__ && window.__CHOICELY_APP_KEY__ !== '__CHOICELY_APP_KEY__'
+      ? window.__CHOICELY_APP_KEY__
+      : getQueryParam('appKey') || getQueryParam('wak')
+
+  const iframe = document.getElementById('w')
+  const err = document.getElementById('err')
+
+  if (!wak || wak === '__CHOICELY_APP_KEY__') {
+    err.style.display = 'flex'
+    iframe.removeAttribute('src')
+    console.error('Missing App Key. Please check config.js or URL parameters.')
+  } else {
+    iframe.src = 'https://cdn.choicely.com/vx/widget.html?no_cache=true&wak=' + encodeURIComponent(wak)
+  }
+
+  const showQrBtn = document.getElementById('showQr')
+  const qrOverlay = document.getElementById('qrOverlay')
+  const qrImg = document.getElementById('qrImg')
+  const qrStatus = document.getElementById('qrStatus')
+  const qrStatusText = document.getElementById('qrStatusText')
+
+  const setLoading = (text) => {
+    qrStatus.hidden = false
+    qrStatusText.textContent = text
+    qrImg.hidden = true
+  }
+
+  const showImage = () => {
+    qrStatus.hidden = true
+    qrImg.hidden = false
+  }
+
+  const loadQr = () => {
+    setLoading('Loading QR…')
+    const url = './qr.png?t=' + Date.now()
+    qrImg.onload = () => showImage()
+    qrImg.onerror = () => setLoading('Preparing app download...')
+    qrImg.src = url
+  }
+
+  const onKeydown = (e) => {
+    if (e.key === 'Escape') closeQr()
+  }
+
+  const openQr = () => {
+    qrOverlay.setAttribute('aria-hidden', 'false')
+    document.addEventListener('keydown', onKeydown)
+    loadQr()
+  }
+
+  const closeQr = () => {
+    qrOverlay.setAttribute('aria-hidden', 'true')
+    document.removeEventListener('keydown', onKeydown)
+  }
+
+  showQrBtn.addEventListener('click', (e) => {
+    e.preventDefault()
+    openQr()
+  })
+
+  qrOverlay.addEventListener('click', (e) => {
+    const t = e.target
+    if (t && t.getAttribute && t.getAttribute('data-close') === 'true') {
+      closeQr()
+    }
+  })
+
+  // --- Real-time Updates ---
+  class FetchEventSource {
+    constructor(url, {headers = {}} = {}) {
+      this.url = url
+      this.headers = headers
+      this.controller = new AbortController()
+      this.retryCount = 0
+      this.retryTimer = null
+      this.closed = false
+      this.init()
+    }
+
+    _safeCallback(name, event) {
+      if (this[name]) this[name](event)
+    }
+
+    close() {
+      this.closed = true
+      if (this.retryTimer) {
+        clearTimeout(this.retryTimer)
+        this.retryTimer = null
+      }
+      this.controller.abort()
+    }
+
+    _scheduleReconnect() {
+      if (this.closed || this.controller.signal.aborted) return
+      if (this.retryTimer) return
+      const delay = Math.min(1000 * (2 ** this.retryCount), 10000)
+      this.retryCount += 1
+      this.retryTimer = setTimeout(() => {
+        this.retryTimer = null
+        if (this.closed) return
+        this.controller = new AbortController()
+        this.init()
+      }, delay)
+    }
+
+    async init() {
+      try {
+        const response = await fetch(this.url, {
+          headers: this.headers,
+          signal: this.controller.signal,
+        })
+
+        if (!response.ok) {
+          console.warn(`[Preview] Connection failed: ${response.status}`)
+          this._scheduleReconnect()
+          return
+        }
+
+        this.retryCount = 0
+        this._safeCallback('onopen')
+
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+
+        while (true) {
+          const {done, value} = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, {stream: true})
+          const lines = buffer.split('\n')
+          buffer = lines.pop()
+
+          for (let line of lines) {
+            if (line.trim().startsWith('data:')) {
+              const dataStr = line.trim().slice(5).trimStart()
+              try {
+                const data = JSON.parse(dataStr)
+                if (data && (data.path || data.data)) {
+                  this._safeCallback('onmessage', {data: JSON.stringify(data)})
+                }
+              } catch (e) {
+                console.warn('[Preview] Failed to parse event data:', dataStr, e)
+              }
+            }
+          }
+        }
+
+        this._scheduleReconnect()
+      } catch (e) {
+        if (!this.controller.signal.aborted) {
+          console.warn('[Preview] Listener error:', e)
+          this._scheduleReconnect()
+        }
+      }
+    }
+  }
+
+  const isValidHost = (value) => /^[a-z0-9.-]+(:\d+)?$/i.test(value)
+
+  const startRealtimeListener = (key) => {
+    if (!key || key === '__CHOICELY_APP_KEY__') return
+
+    const host = window.__CHOICELY_REALTIME_SERVER__
+    if (!host || host === '__CHOICELY_REALTIME_SERVER__') {
+      console.error('[Preview] CHOICELY_REALTIME_SERVER is not configured')
+      return
+    }
+    if (!isValidHost(host)) {
+      console.error('[Preview] CHOICELY_REALTIME_SERVER is invalid:', host)
+      return
+    }
+
+    const url = `https://${host}/apps/${key}.json`
+    const eventSource = new FetchEventSource(url, {headers: {Accept: 'text/event-stream'}})
+
+    let reloadTimer = null
+    eventSource.onmessage = () => {
+      if (reloadTimer) return
+      reloadTimer = setTimeout(() => {
+        reloadTimer = null
+        const iframe = document.getElementById('w')
+        if (iframe) {
+          try {
+            const urlObj = new URL(iframe.src)
+            urlObj.searchParams.set('_t', Date.now())
+            iframe.src = urlObj.toString()
+          } catch (e) {
+            console.warn('[Preview] Failed to refresh iframe URL:', e)
+          }
+        }
+      }, 250)
+    }
+  }
+
+  if (wak && wak !== '__CHOICELY_APP_KEY__') {
+    startRealtimeListener(wak)
+  }
+
+  const pushBtn = document.getElementById('pushChanges')
+
+  const hostTunnel =
+    window.__PREVIEW_SERVER__ &&
+    window.__PREVIEW_SERVER__ !== '__PREVIEW_SERVER__'
+      ? String(window.__PREVIEW_SERVER__)
+      : null
+
+  const previewToken =
+    window.__PREVIEW_TOKEN__ &&
+    window.__PREVIEW_TOKEN__ !== '__PREVIEW_TOKEN__'
+      ? String(window.__PREVIEW_TOKEN__)
+      : null
+
+  const getReleaseBase = () => {
+    if (!hostTunnel) {
+      throw new Error('__PREVIEW_SERVER__ is missing (config.js placeholder or not generated)')
+    }
+    // normalize: require scheme, strip trailing slashes
+    const base = hostTunnel.trim()
+    if (!/^https?:\/\//i.test(base)) {
+      throw new Error('__PREVIEW_SERVER__ must include scheme, e.g. https://xyz.trycloudflare.com')
+    }
+    return base.replace(/\/+$/, '')
+  }
+
+  const setBtnState = (text, disabled, {error = false} = {}) => {
+    pushBtn.textContent = text
+    pushBtn.setAttribute('aria-disabled', disabled ? 'true' : 'false')
+    pushBtn.style.pointerEvents = disabled ? 'none' : 'auto'
+    pushBtn.style.opacity = disabled ? '0.8' : '1'
+
+    // error styling
+    pushBtn.classList.toggle('is-error', error)
+  }
+
+  const pushChanges = async () => {
+    const PUSH_TIMEOUT_MS = 10 * 60 * 1000 // 10 minutes
+
+    try {
+      setBtnState('Pushing…', true, {error: false})
+
+      const url = `${getReleaseBase()}/__release`
+
+      const headers = {'Content-Type': 'application/json'}
+      if (previewToken) headers['X-Preview-Token'] = previewToken
+
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), PUSH_TIMEOUT_MS)
+
+      let res
+      try {
+        res = await fetch(url, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({}),
+          signal: controller.signal,
+        })
+      } finally {
+        clearTimeout(timeoutId)
+      }
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => '')
+        throw new Error(`Release failed (${res.status}). ${text}`.trim())
+      }
+
+      setBtnState('Pushed', true, {error: false})
+      setTimeout(() => setBtnState('Push changes to app', false, {error: false}), 1400)
+    } catch (e) {
+      const isTimeout =
+        e && (e.name === 'AbortError' || String(e).toLowerCase().includes('abort'))
+
+      console.error('[Preview] Push failed:', e)
+      setBtnState(isTimeout ? 'Push timed out — retry' : 'Push failed — retry', false, {error: true})
+    }
+  }
+
+  pushBtn.addEventListener('click', (e) => {
+    e.preventDefault()
+    pushChanges()
+  })
+</script>
+</body>
+</html>

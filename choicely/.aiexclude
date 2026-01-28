@@ -1,0 +1,19 @@
+# Exclude Web Harness - Prevents confusion with React Native Web specific configs
+/rn/web/
+
+# Exclude Dev Scripts and Proxies
+/rn/dev/
+/scripts/
+.watchmanconfig
+
+# Exclude IDE and Project Configs
+.idx/
+.vscode/
+.git/
+
+# Exclude Assets not directly inside src (unless you move assets to src/assets)
+/res/
+
+# Lock files
+*.lock
+package-lock.json

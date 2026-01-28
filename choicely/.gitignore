@@ -1,0 +1,154 @@
+############################
+# OS / Editor / IDE
+############################
+.DS_Store
+.idea/
+*.iml
+*.hprof
+
+############################
+# Logs / Temp / Misc
+############################
+*.log
+tmp/
+*.pid
+scratch/
+*.salive
+.cache/
+
+############################
+# Environment / Local config
+############################
+.env
+local.properties
+**/.xcode.env.local
+res/preview/config.js
+
+############################
+# Build output (generic)
+############################
+build/
+.build/
+dist/
+out/
+bin/
+gen/
+
+############################
+# Android / Gradle
+############################
+.gradle/
+.cxx/
+.externalNativeBuild/
+captures/
+.navigation/
+.kotlin/
+
+# Built application files
+*.apk
+*.ap_
+*.dex
+*.class
+
+# Proguard
+proguard/
+
+# Freeline
+freeline.py
+freeline/
+freeline_project_description.json
+
+# Gradle wrapper kept, everything else in gradle/ ignored
+gradle/*
+!gradle/wrapper/
+
+# App env folders (as you had)
+app/dev/
+app/prod/
+
+# Keystores (keep debug.keystore)
+*.keystore
+!debug.keystore
+# *.jks  # uncomment if you don't want to commit .jks
+
+############################
+# iOS / Xcode
+############################
+DerivedData/
+xcuserdata/
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+*.xccheckout
+*.moved-aside
+*.hmap
+*.ipa
+*.xcuserstate
+.xcode.env
+.bundle/
+vendor/
+*.xcprivacy
+*.xcscheme
+
+############################
+# CocoaPods / Ruby
+############################
+**/Pods/
+vendor/bundle/
+*.lock
+
+############################
+# React Native / Metro
+############################
+.metro-health-check*
+*.jsbundle
+*.bundle
+*.bundle.js
+
+############################
+# Node / JS package managers
+############################
+node_modules/
+npm-debug.log
+yarn-error.log
+
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+############################
+# fastlane
+############################
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+fastlane/readme.md
+
+**/fastlane/report.xml
+**/fastlane/Preview.html
+**/fastlane/screenshots/
+**/fastlane/test_output/
+
+############################
+# Testing
+############################
+coverage/
+
+############################
+# Archive files in root
+############################
+/*.zip
+/*.tar
+/*.tar.gz
+/*.tgz
+/*.7z
+/*.rar
