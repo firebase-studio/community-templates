@@ -53,7 +53,6 @@ if(!/^\d+$/.test(String(port))){console.error('ERROR: PREVIEW_SERVER_PORT must b
 let out = '';
 out += 'window.__CHOICELY_APP_KEY__=' + JSON.stringify(appKey) + ';\\n';
 if (realtimeServer) out += 'window.__CHOICELY_REALTIME_SERVER__=' + JSON.stringify(realtimeServer) + ';\\n';
-out += 'window.__PREVIEW_SERVER_PORT__=' + JSON.stringify(port) + ';\\n';
 out += 'window.__PREVIEW_TOKEN__=' + JSON.stringify(token) + ';\\n';
 out += 'window.__PREVIEW_SERVER__=' + JSON.stringify(tunnel) + ';\\n';
 

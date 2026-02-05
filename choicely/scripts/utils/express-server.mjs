@@ -2,9 +2,13 @@
 import path from 'node:path'
 import { spawn } from 'node:child_process'
 import fs from 'node:fs'
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 
 import express from 'express'
 import compression from 'compression'
+
+const execFileAsync = promisify(execFile);
 
 const [, , rootArg, portArg] = process.argv
 
@@ -50,18 +54,27 @@ const shouldCompress = (req, res) => {
 }
 
 function writeCors(res) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Preview-Token')
-  res.setHeader('Access-Control-Max-Age', '86400')
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Preview-Token");
+  res.setHeader("Access-Control-Max-Age", "86400");
 }
 
+app.use((req, res, next) => {
+  writeCors(res);
+  if (req.method === "OPTIONS") {
+    // CORS preflight
+    res.status(204).end();
+    return;
+  }
+  next();
+});
+
 function send(res, status, body) {
-  writeCors(res)
-  res.status(status)
-  res.setHeader('Content-Type', 'text/plain; charset=utf-8')
-  res.setHeader('Cache-Control', 'no-store')
-  res.end(body)
+  res.status(status);
+  res.setHeader("Content-Type", "text/plain; charset=utf-8");
+  res.setHeader("Cache-Control", "no-store");
+  res.end(body);
 }
 
 function requirePreviewToken(req, res, next) {
@@ -133,6 +146,31 @@ app.post('/__release', (req, res) => {
 app.all('/__release', (req, res) => {
   send(res, 405, 'Method not allowed\n')
 })
+
+app.get("/env.js", async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  try {
+    const { stdout, stderr } = await execFileAsync(
+      "bash",
+      ["-ic", 'source ~/.bashrc >/dev/null 2>&1; printf "%s" "$HOST_TUNNEL_WEB"'],
+      {
+        encoding: "utf8",
+        timeout: 3000,
+        maxBuffer: 1024 * 1024,
+      },
+    );
+    const value = String(stdout ?? "").trim();
+    if (stderr && String(stderr).trim()) {
+      logLine(`env.js bash stderr: ${String(stderr).trim()}`);
+    }
+    res.type("application/javascript").send(
+      `window.__COMPONENTS_SERVER__=${JSON.stringify(value)};\n`,
+    );
+  } catch (e) {
+    logLine(`env.js error: ${String(e && e.stack ? e.stack : e)}`);
+    res.status(500).type("text/plain").send("ERROR: failed to load env from bash\n");
+  }
+});
 
 app.use(
   compression({

@@ -1,18 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Choicely</title>
     <style>
+        html,
         body {
-            -webkit-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
+          margin: 0;
+          background: #fff;
+        }
+
+        body {
+          -webkit-user-select: none;
+          -ms-user-select: none;
+          user-select: none;
+        }
+
+        [data-testid="toastContentContainer"] {
+          pointer-events: none !important;
+        }
+
+        [data-testid="toastTouchableContainer"] {
+          pointer-events: none !important;
         }
     </style>
 </head>
+
 <body>
 <div id="root"></div>
+<script>
+    (function () {
+      try {
+        window.parent && window.parent.postMessage(
+          { type: "CHOICELY_COMPONENTS_READY", ts: Date.now() },
+          "*"
+        );
+      } catch (e) {}
+    })();
+</script>
 </body>
+
 </html>

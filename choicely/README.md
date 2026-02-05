@@ -2,7 +2,7 @@
 
 ## Getting started
 
-<a href="https://studio.firebase.google.com/new?template=https%3A%2F%2Fgithub.com%2Fchoicely%2Ffirebase-studio-template&name=My%20App" target="_blank" rel="noopener noreferrer">
+<a href="https://studio.firebase.google.com/new?template=https:%2F%2Fgithub.com%2Fchoicely%2Ffirebase-studio-template%2Ftree%2Fmain&name=My%20App" target="_blank" rel="noopener noreferrer">
   <picture>
     <source
       media="(prefers-color-scheme: dark)"

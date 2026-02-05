@@ -76,4 +76,4 @@ import {SvgUri} from 'react-native-svg'
 
 Icons: use `react-native-vector-icons` only (do not install others). Find icons: `ls node_modules/react-native-vector-icons/glyphmaps/` then `cat node_modules/react-native-vector-icons/glyphmaps/<icon_pack_name>.json`.
 Lists: always use `@shopify/flash-list` instead of FlatList; disable root ScrollView if FlashList is the main scrollable area (fixes infinite pagination issues).
-Storage/requests: persistence via `react-native-mmkv` (works on web) and export a shared `storage` instance; web requests via `fetch`; web-only CORS: use `https://test.cors.workers.dev/?<target_url>`. Pass `Origin` and `Referer` inside a JSON-stringified `x-cors-headers` header to bypass browser restrictions.
+Storage/requests: persistence via `react-native-mmkv` (works on web) and export a shared `storage` instance; web requests via `fetch`; web-only CORS: use `https://cors.choicely.io/?target=<encoded_target_url>`.

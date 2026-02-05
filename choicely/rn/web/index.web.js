@@ -1,10 +1,17 @@
 import React from 'react'
-import {AppRegistry, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native'
-import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context'
+import { AppRegistry, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 
-import {componentMapping, defaultComponentName, registerComponents} from '../src/index'
+import {
+  componentMapping,
+  defaultComponentName,
+  registerComponents,
+} from '../src/index'
 
-registerComponents({useSafeAreaProvider: false})
+import { WebRootChips } from './gallery/Chips'
+import { WebRootPreviewList } from './gallery/PreviewList'
+
+registerComponents({ useSafeAreaProvider: false })
 
 if (typeof document === 'undefined' || document.documentElement == null) {
   throw new Error('Document is undefined. This file should be run in a web environment.')
@@ -25,71 +32,45 @@ rootTag.style.height = '100%'
 rootTag.style.display = 'flex'
 rootTag.style.flexDirection = 'column'
 
-const HIGHLIGHT = '#37ff95'
+const GALLERY_MODES = new Set(['chips', 'preview_list'])
 
 function getQueryState() {
   if (typeof window === 'undefined') {
-    return {forcedComponentName: null, queryProps: {}}
+    return { forcedComponentName: null, queryProps: {}, galleryMode: 'chips' }
   }
+
   const params = new URLSearchParams(window.location.search)
+
   const queryProps = {}
   for (const [key, value] of params.entries()) {
     queryProps[key] = value
   }
-  const forcedComponentName =
-    params.get('_component') ?? params.get('component') ?? null
-  return { forcedComponentName, queryProps }
+
+  const forcedComponentName = params.get('_component') ?? params.get('component') ?? null
+
+  const rawMode = params.get('_gallery_mode') ?? ''
+  const galleryMode = GALLERY_MODES.has(rawMode) ? rawMode : 'chips'
+
+  return { forcedComponentName, queryProps, galleryMode }
 }
 
-const {forcedComponentName, queryProps} = getQueryState()
+const { forcedComponentName, queryProps, galleryMode } = getQueryState()
 
-function RootSafeArea({children}) {
+function RootSafeArea({ children }) {
   return (
     <SafeAreaProvider style={styles.safeAreaProvider}>
-      <SafeAreaView style={styles.safeArea}>
-        {children}
-      </SafeAreaView>
+      <SafeAreaView style={styles.safeArea}>{children}</SafeAreaView>
     </SafeAreaProvider>
   )
 }
 
-function MessageScreen({text}) {
+function MessageScreen({ text }) {
   return (
-    <ScrollView contentContainerStyle={{flexGrow: 1}}>
+    <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
       <View style={styles.messageContainer}>
         <Text style={styles.messageText}>{text}</Text>
       </View>
     </ScrollView>
-  )
-}
-
-export function TopBar({names, active, onSelect}) {
-  return (
-    <View style={styles.topBar}>
-      {names.map((name) => {
-        const selected = name === active
-        return (
-          <Pressable
-            key={name}
-            onPress={() => onSelect(name)}
-            style={({pressed}) => [
-              styles.chipBase,
-              selected ? styles.chipSelected : styles.chipUnselected,
-              !selected && pressed && styles.chipPressed,
-            ]}
-          >
-            <Text
-              style={[
-                styles.chipText,
-                selected && styles.chipTextSelected,
-              ]}
-            >
-              {name}
-            </Text>
-          </Pressable>
-        )
-      })}
-    </View>
   )
 }
 
@@ -98,23 +79,27 @@ function WebRoot({
   initialComponent,
   forcedComponentName,
   queryProps = {},
+  galleryMode = 'chips',
 }) {
   const names = Object.keys(components)
 
   if (names.length === 0) {
     return (
       <RootSafeArea>
-        <MessageScreen text={`No components found`} />
+        <MessageScreen text="No components found" />
       </RootSafeArea>
     )
   }
 
+  // forced component always wins, regardless of gallery mode
   if (forcedComponentName) {
     const ForcedComponent = components[forcedComponentName]?.registeredComponent
     return (
       <RootSafeArea>
         {ForcedComponent ? (
-          <ForcedComponent {...queryProps} />
+          <View style={styles.componentHost}>
+            <ForcedComponent {...queryProps} />
+          </View>
         ) : (
           <MessageScreen text={`Component "${String(forcedComponentName)}" not found`} />
         )}
@@ -122,71 +107,44 @@ function WebRoot({
     )
   }
 
-  const initial =
-    initialComponent && names.includes(initialComponent) ? initialComponent : names[0]
-  const [active, setActive] = React.useState(initial)
-  const Active = active ? components[active]?.registeredComponent : undefined
+  if (galleryMode === 'preview_list') {
+    return (
+      <RootSafeArea>
+        <View style={styles.webRootContainer}>
+          <WebRootPreviewList
+            names={names}
+            components={components}
+            queryProps={queryProps}
+          />
+        </View>
+      </RootSafeArea>
+    )
+  }
+
   return (
     <RootSafeArea>
       <View style={styles.webRootContainer}>
-        <TopBar names={names} active={active} onSelect={setActive} />
-        {Active ? (
-          <Active {...queryProps} />
-        ) : (
-          <MessageScreen text={`Component "${String(active)}" not found`} />
-        )}
+        <WebRootChips
+          names={names}
+          components={components}
+          initialComponent={initialComponent}
+          queryProps={queryProps}
+          componentHostStyle={styles.componentHost}
+        />
       </View>
     </RootSafeArea>
   )
 }
 
 const styles = StyleSheet.create({
-  safeAreaProvider: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  webRootContainer: {
-    flex: 1,
-  },
-  topBar: {
-    backgroundColor: '#0f0f0f',
-    borderBottomWidth: 1,
-    borderColor: '#232323',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-  },
-  chipBase: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    borderWidth: 1,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  chipSelected: {
-    borderColor: HIGHLIGHT,
-    backgroundColor: 'rgba(55, 255, 149, 0.14)',
-  },
-  chipUnselected: {
-    borderColor: '#2a2a2a',
-    backgroundColor: 'transparent',
-  },
-  chipPressed: {
-    backgroundColor: '#1a1a1a',
-  },
-  chipText: {
-    color: '#e5e5e5',
-    fontWeight: '500',
-  },
-  chipTextSelected: {
-    color: HIGHLIGHT,
-    fontWeight: '600',
-  },
+  safeAreaProvider: { flex: 1 },
+  safeArea: { flex: 1, backgroundColor: '#fff' },
+
+  webRootContainer: { flex: 1, backgroundColor: '#fff' },
+
+  // shared host that forces a white background behind any component
+  componentHost: { flex: 1, backgroundColor: '#fff' },
+
   messageContainer: {
     flex: 1,
     alignItems: 'center',
@@ -206,5 +164,6 @@ AppRegistry.runApplication(WEB_APP_NAME, {
     initialComponent: defaultComponentName,
     forcedComponentName,
     queryProps,
+    galleryMode,
   },
 })

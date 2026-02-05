@@ -23,6 +23,10 @@
 
     --shadow: 0 24px 80px rgba(0, 0, 0, .55);
     --bezel-edge: rgba(255, 255, 255, .10);
+
+    --sidebar-width: 400px;
+    --sidebar-collapsed-width: 48px;
+    --sidebar-transition: width 0.3s ease;
 }
 
 *, *::before, *::after {
@@ -39,9 +43,9 @@ body {
     overflow: hidden;
     overscroll-behavior: none;
 
-    display: grid;
-    place-items: center;
-    padding: var(--page-pad);
+    /* Removed grid centering to allow flex layout */
+    display: block;
+    padding: 0;
 
     color: var(--fg);
     background-color: var(--bg);
@@ -56,18 +60,119 @@ body {
     font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
 }
 
+.layout-wrapper {
+    display: flex;
+    height: 100%;
+    width: 100%;
+}
+
+.sidebar {
+    width: var(--sidebar-width);
+    height: 100%;
+    background: var(--sidebar);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: row; /* Changed to row to put content next to toggle */
+    transition: var(--sidebar-transition);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+}
+
+.sidebar.collapsed {
+    width: var(--sidebar-collapsed-width);
+}
+
+/* Vertical toggle strip */
+.sidebar-toggle {
+    width: 48px;
+    height: 100%;
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--border);
+    color: var(--fg);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 0;
+    gap: 10px;
+    transition: background 0.15s ease;
+}
+
+.sidebar-toggle:hover {
+    background: var(--sel-2);
+}
+
+/* Rotated label */
+.sidebar-toggle .label {
+    writing-mode: vertical-lr;
+    transform: rotate(180deg);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.sidebar-toggle:hover .label {
+    color: var(--fg-strong);
+}
+
+.sidebar-toggle .arrow {
+    font-size: 12px;
+    transition: transform 0.3s ease;
+}
+
+.sidebar.collapsed .sidebar-toggle .arrow {
+    transform: rotate(180deg);
+}
+
+.sidebar-content {
+    flex: 1;
+    height: 100%;
+    overflow: hidden;
+    background: #000;
+}
+
+.sidebar-content iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+}
+
+/* Hide iframe when collapsed?
+   Actually, with flex layout, if width is minimal, it might get squashed.
+   Let's ensure it's hidden or handled gracefully.
+*/
+.sidebar.collapsed .sidebar-content {
+   display: none;
+}
+
+
+/* Main Stack Styles */
 .stack {
-    width: var(--phone-w);
+    flex: 1;
     display: flex;
     flex-direction: column;
     gap: var(--header-gap);
-    align-items: stretch;
+    align-items: center;
+    justify-content: center;
+    padding: var(--page-pad);
+    min-width: 0;
+    height: 100%;
+    overflow-y: auto;
 }
 
 .header {
     text-align: center;
     color: rgba(217, 230, 224, .95);
     font: 500 14px/1.45 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    max-width: var(--phone-w);
+    width: 100%;
 }
 
 .header h1 {
@@ -177,7 +282,7 @@ body {
 }
 
 .phone {
-    width: 100%;
+    width: var(--phone-w); /* Fixed width logic */
     height: var(--phone-h);
     max-height: 900px;
 
@@ -191,6 +296,7 @@ body {
     background-color: rgba(14, 18, 17, .35);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
+    flex-shrink: 0; /* Do not shrink the phone */
 }
 
 .screen {
@@ -366,4 +472,74 @@ iframe {
 
 [hidden] {
     display: none !important;
+}
+
+.sidebar-content {
+  position: relative;
+}
+
+/* Overlay shown while components env.js is not usable */
+.components-status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(2px);
+  z-index: 2;
+  font-size: 14px;
+}
+
+/* Hide overlay */
+.components-status.is-hidden {
+  display: none;
+}
+
+/* Optional "error-ish" vibe */
+.components-status.is-error {
+  background: rgba(255, 245, 245, 0.95);
+}
+
+/* If you already have .spinner, you can delete this block */
+.components-status .spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 2px solid rgba(0, 0, 0, 0.25);
+  border-top-color: rgba(0, 0, 0, 0.75);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Make sure iframe sits below overlay */
+#componentsFrame {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* Components sidebar loading status: readable on white */
+.components-status,
+.components-status #componentsStatusText {
+  color: #000;
+}
+
+/* Optional: if your spinner uses border-color and looks washed out */
+.components-status .spinner {
+  border-color: rgba(0, 0, 0, 0.2);
+  border-top-color: #000;
+}
+
+/* If you have an "error" modifier and want it still black (not red/gray) */
+.components-status.is-error,
+.components-status.is-error #componentsStatusText {
+  color: #000;
 }

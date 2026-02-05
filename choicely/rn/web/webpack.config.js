@@ -12,8 +12,8 @@ const rnRoot = path.resolve(__dirname, '..')
 const webRoot = path.resolve(rnRoot, 'web')
 const nodeModulesRoot = path.resolve(repoRoot, 'node_modules')
 
-const {getPorts} = require('../dev/ports')
-const {webPort} = getPorts(repoRoot)
+const { getPorts } = require('../dev/ports')
+const { webPort } = getPorts(repoRoot)
 
 const indexHtmlPath = path.resolve(webRoot, 'index.html')
 const indexJsPath = path.resolve(webRoot, 'index.web.js')
@@ -22,12 +22,13 @@ const transpileModules = [
   'react-native-vector-icons',
   'react-native-toast-message',
   'react-native-reanimated',
-  'react-native-gesture-handler'
+  'react-native-gesture-handler',
 ]
 
 const babelLoaderConfiguration = {
   test: /\.[jt]sx?$/,
   include: [
+    webRoot,
     indexJsPath,
     path.resolve(rnRoot, 'src'),
     ...transpileModules.map((m) => path.resolve(nodeModulesRoot, m)),
@@ -55,7 +56,7 @@ const ttfLoaderConfiguration = {
 const isWorkspace = Boolean(process.env.WORKSPACE_SLUG)
 
 module.exports = {
-  entry: {app: indexJsPath},
+  entry: { app: indexJsPath },
   output: {
     clean: true,
     path: path.resolve(repoRoot, 'dist'),
@@ -84,7 +85,7 @@ module.exports = {
     ],
   },
   plugins: [
-    new HtmlWebpackPlugin({template: indexHtmlPath}),
+    new HtmlWebpackPlugin({ template: indexHtmlPath }),
     new webpack.HotModuleReplacementPlugin(),
     new webpack.ProvidePlugin({
       process: 'process/browser',
@@ -101,14 +102,14 @@ module.exports = {
     allowedHosts: 'all',
     ...(isWorkspace
       ? {
-          client: {
-            webSocketURL: {
-              port: 443,
-              pathname: '/ws',
-            },
+        client: {
+          webSocketURL: {
+            port: 443,
+            pathname: '/ws',
           },
-          webSocketServer: 'ws',
-        }
+        },
+        webSocketServer: 'ws',
+      }
       : {}),
   },
   cache: {
