@@ -8,42 +8,65 @@ function afterScheme(uri) {
   return rest.replace(/^\/+/, '')
 }
 
-async function copyToClipboard(text) {
+function canUseAsyncClipboard() {
   try {
-    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+    const pp = document?.permissionsPolicy || document?.featurePolicy
+    if (pp?.allowsFeature && !pp.allowsFeature('clipboard-write')) return false
+  } catch (_) {}
+  return typeof navigator !== 'undefined' && !!navigator.clipboard?.writeText
+}
+
+function copyViaExecCommand(text) {
+  if (typeof document === 'undefined') return false
+
+  try {
+    window?.focus?.()
+    document.body?.focus?.()
+  } catch (_) {}
+
+  const el = document.createElement('textarea')
+  el.value = text
+  el.setAttribute('readonly', '')
+  el.style.position = 'fixed'
+  el.style.top = '0'
+  el.style.left = '-9999px'
+  el.style.opacity = '0'
+  el.style.userSelect = 'text'
+  el.style.webkitUserSelect = 'text'
+
+  document.body.appendChild(el)
+
+  el.focus()
+  el.select()
+  el.setSelectionRange(0, text.length)
+
+  let ok = false
+  try {
+    ok = document.execCommand('copy')
+  } catch (_) {
+    ok = false
+  }
+
+  document.body.removeChild(el)
+  return ok
+}
+
+async function copyToClipboard(text) {
+  const okSync = copyViaExecCommand(text)
+  if (okSync) return true
+  if (canUseAsyncClipboard()) {
+    try {
       await navigator.clipboard.writeText(text)
       return true
+    } catch (e) {
     }
-  } catch (e) {
-    // clipboard blocked by permissions policy etc -> fall through
   }
-
   try {
-    if (typeof document !== 'undefined') {
-      const el = document.createElement('textarea')
-      el.value = text
-      el.setAttribute('readonly', '')
-      el.style.position = 'fixed'
-      el.style.left = '-9999px'
-      document.body.appendChild(el)
-      el.select()
-      const ok = document.execCommand('copy')
-      document.body.removeChild(el)
-      return ok
-    }
-  } catch (e) {
-    // fall through
-  }
-
-  try {
-    if (typeof window !== 'undefined') {
-      window.prompt('Copy this:', text)
-      return false
-    }
-  } catch (_) { }
-
+    window?.prompt('Copy this:', text)
+  } catch (_) {}
   return false
 }
+
 
 function MessageScreen({ text }) {
   return (
@@ -77,7 +100,7 @@ function CopyIcon({ size = 15 }) {
 }
 
 function CopyFooter({ name, toCopy, variant = 'list' }) {
-  const [tip, setTip] = React.useState(null) // null | 'Copied'
+  const [tip, setTip] = React.useState(null)
   const tipTimer = React.useRef(null)
 
   const clearTipTimer = React.useCallback(() => {
@@ -96,8 +119,9 @@ function CopyFooter({ name, toCopy, variant = 'list' }) {
   }, [clearTipTimer])
 
   const onCopy = React.useCallback(async () => {
-    await copyToClipboard(toCopy)
-    showCopied()
+    const ok = await copyToClipboard(toCopy)
+    if (ok) showCopied()
+    else setTip('Copy')
   }, [toCopy, showCopied])
 
   const showFull = variant === 'popup'
@@ -170,7 +194,6 @@ function CopyFooter({ name, toCopy, variant = 'list' }) {
 
 
 function Popup({ open, name, components, queryProps, onClose }) {
-  // ESC to close on web
   React.useEffect(() => {
     if (!open) return
     if (typeof window === 'undefined') return
@@ -188,6 +211,99 @@ function Popup({ open, name, components, queryProps, onClose }) {
   const uri = name ? `choicely://special/rn/${name}` : ''
   const toCopy = afterScheme(uri)
 
+  const isWeb = typeof document !== 'undefined'
+
+  const Card = (
+    <Pressable
+      style={styles.modalCenter}
+      onPress={(e) => e?.stopPropagation?.()}
+      onPressIn={(e) => e?.stopPropagation?.()}
+      onStartShouldSetResponder={() => true}
+      onResponderGrant={(e) => e?.stopPropagation?.()}
+    >
+      <View style={styles.modalCard}>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle} numberOfLines={1}>
+            {name}
+          </Text>
+
+          <Pressable
+            onPress={(e) => {
+              e?.stopPropagation?.()
+              onClose()
+            }}
+            onPressIn={(e) => e?.stopPropagation?.()}
+            accessibilityRole="button"
+            style={({ pressed, hovered }) => [
+              styles.modalCloseBtn,
+              pressed && styles.modalCloseBtnPressed,
+              hovered && styles.modalCloseBtnHovered,
+            ]}
+          >
+            <Text style={styles.modalCloseText}>×</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.modalFrame}>
+          <View style={styles.modalComponentHost}>
+            {Comp ? (
+              <Comp {...queryProps} />
+            ) : (
+              <MessageScreen text={`Component "${String(name)}" not found`} />
+            )}
+          </View>
+        </View>
+
+        <View
+          style={styles.previewFooter}
+          onStartShouldSetResponder={() => true}
+          onResponderGrant={(e) => e?.stopPropagation?.()}
+        >
+          <CopyFooter name={name} toCopy={toCopy} variant="popup" />
+        </View>
+      </View>
+    </Pressable>
+  )
+
+  if (isWeb) {
+    return (
+      <View
+        style={[
+          styles.modalBackdrop,
+          {
+            position: 'fixed',
+            left: 0,
+            right: 0,
+            top: 0,
+            bottom: 0,
+            zIndex: 999999,
+          },
+        ]}
+      >
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          accessibilityRole="button"
+          aria-label="Close"
+        />
+        <View
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 0,
+            bottom: 0,
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 18,
+          }}
+          pointerEvents="box-none"
+        >
+          {Card}
+        </View>
+      </View>
+    )
+  }
   return (
     <Modal
       visible={open}
@@ -196,41 +312,8 @@ function Popup({ open, name, components, queryProps, onClose }) {
       onRequestClose={onClose}
       presentationStyle="overFullScreen"
     >
-      {/* Backdrop */}
       <Pressable style={styles.modalBackdrop} onPress={onClose}>
-        {/* stop propagation so clicks inside don't close */}
-        <Pressable style={styles.modalCenter} onPress={() => { }}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle} numberOfLines={1}>
-                {name}
-              </Text>
-
-              <Pressable
-                onPress={onClose}
-                accessibilityRole="button"
-                style={({ pressed, hovered }) => [
-                  styles.modalCloseBtn,
-                  pressed && styles.modalCloseBtnPressed,
-                  hovered && styles.modalCloseBtnHovered,
-                ]}
-              >
-                <Text style={styles.modalCloseText}>×</Text>
-              </Pressable>
-            </View>
-
-            <View style={styles.modalFrame}>
-              {/* IMPORTANT: interactive */}
-              <View style={styles.modalComponentHost}>
-                {Comp ? <Comp {...queryProps} /> : <MessageScreen text={`Component "${String(name)}" not found`} />}
-              </View>
-            </View>
-
-            <View style={styles.previewFooter}>
-              <CopyFooter name={name} toCopy={toCopy} variant="popup" />
-            </View>
-          </View>
-        </Pressable>
+        {Card}
       </Pressable>
     </Modal>
   )
@@ -449,26 +532,6 @@ const styles = StyleSheet.create({
   messageText: {
     fontSize: 16,
   },
-
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    padding: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalCenter: {
-    width: '100%',
-    maxWidth: 980,
-    maxHeight: '100%',
-  },
-  modalCard: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-    backgroundColor: '#fff',
-  },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -538,5 +601,21 @@ const styles = StyleSheet.create({
   },
   previewLinkNamePopup: {
     fontWeight: '800',
+  },
+  modalBackdrop: {
+    backgroundColor: 'rgba(0,0,0,0.55)',
+  },
+  modalCenter: {
+    width: '100%',
+    maxWidth: 980,
+    maxHeight: '90vh',
+  },
+  modalCard: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: '#fff',
+    maxHeight: '90vh',
   },
 })
