@@ -305,7 +305,7 @@ const GUTTER = 12
 const styles = StyleSheet.create({
   previewList: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#000',
   },
   previewListContent: {
     padding: 12,
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
   previewItem: {
     width: `${100 / ITEMS_PER_ROW}%`,
     paddingHorizontal: GUTTER / 2,
-    paddingVertical: 18,
+    paddingVertical: 4,
   },
 
   previewItemPressable: {
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
 
   previewFrame: {
     width: '100%',
-    aspectRatio: 9 / 20,
+    aspectRatio: 9 / 18,
     backgroundColor: '#fff',
     overflow: 'hidden',
   },
