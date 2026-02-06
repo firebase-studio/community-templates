@@ -107,7 +107,10 @@ function CopyFooter({ name, toCopy, variant = 'list' }) {
 
   return (
     <Pressable
-      onPress={() => void onCopy()}
+      onPress={(e) => {
+        if (e && e.stopPropagation) e.stopPropagation()
+        void onCopy()
+      }}
       onHoverIn={() => {
         clearTipTimer()
       }}
@@ -194,7 +197,7 @@ function Popup({ open, name, components, queryProps, onClose }) {
       presentationStyle="overFullScreen"
     >
       {/* Backdrop */}
-      <Pressable style={styles.modalBackdrop} onPress={onClose} accessibilityRole="button">
+      <Pressable style={styles.modalBackdrop} onPress={onClose}>
         {/* stop propagation so clicks inside don't close */}
         <Pressable style={styles.modalCenter} onPress={() => { }}>
           <View style={styles.modalCard}>
@@ -249,7 +252,6 @@ function PreviewList({ names, components, queryProps }) {
               {/* Clickable card */}
               <Pressable
                 onPress={() => setOpenName(name)}
-                accessibilityRole="button"
                 style={({ pressed, hovered }) => [
                   styles.previewItemPressable,
                   (pressed || hovered) && styles.previewItemPressableActive,
