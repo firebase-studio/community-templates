@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Choicely Preview</title>
+    <link rel="stylesheet" href="./styles.css" />
+</head>
+
+<body>
+<div class="corner-actions">
+    <a id="pushChanges" class="btn" href="#" role="button">Push changes to app</a>
+</div>
+
+<div class="layout-wrapper">
+    <div id="sidebar" class="sidebar collapsed">
+        <button id="sidebarToggle" class="sidebar-toggle" aria-label="Toggle sidebar">
+            <span class="label">Components</span>
+            <span class="arrow">◀</span>
+        </button>
+        <div class="sidebar-content">
+            <div id="componentsStatus" class="components-status" aria-live="polite">
+                <span class="spinner" aria-hidden="true"></span>
+                <span id="componentsStatusText">Loading components…</span>
+            </div>
+
+            <iframe id="componentsFrame" title="Components"
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+                    allow="fullscreen; clipboard-write; clipboard-read;"></iframe>
+        </div>
+    </div>
+
+    <div class="stack">
+        <div class="header">
+            <h1>Preview your Choicely mobile app</h1>
+            <p>Scan the QR code to preview on a real device.</p>
+            <div class="actions">
+                <a id="showQr" class="btn secondary" href="#" role="button">Show QR</a>
+                <a class="btn secondary" href="https://studio.choicely.com" target="_blank" rel="noopener noreferrer">
+                    Open in Choicely Studio
+                </a>
+            </div>
+        </div>
+
+        <div class="phone" role="region" aria-label="Phone preview frame">
+            <div class="screen">
+                <div id="err" class="error" role="alert" aria-live="polite">
+                    <div class="box">
+                        <p class="title">Missing <code>CHOICELY_APP_KEY</code></p>
+                        <p class="hint">config.js was not generated (or it still contains the placeholder).</p>
+                    </div>
+                </div>
+                <iframe id="w" title="Choicely Widget"
+                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+                        allow="fullscreen; clipboard-write; clipboard-read;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="qrOverlay" class="qr-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-label="QR Code">
+    <div class="qr-backdrop" data-close="true"></div>
+
+    <div class="qr-modal" role="document">
+        <button class="qr-close" type="button" aria-label="Close" data-close="true">×</button>
+
+        <p class="qr-title">
+            Scan the QR code on your mobile device to download the app on your phone.
+        </p>
+
+        <div id="qrStatus" class="qr-status">
+            <span class="spinner" aria-hidden="true"></span>
+            <span id="qrStatusText">Loading QR…</span>
+        </div>
+
+        <img id="qrImg" class="qr-img" src="./qr.png" alt="QR code" hidden />
+    </div>
+</div>
+
+<script src="./config.js"></script>
+
+<script>
+    (function () {
+      if (!window.__PREVIEW_SERVER__) throw new Error("__PREVIEW_SERVER__ missing");
+
+      const POLL_MS = 5000;
+      const READY_TIMEOUT_MS = 12000;     // time to wait for postMessage READY
+      const RETRY_BACKOFF_MAX_MS = 12000;
+
+      const envUrl = String(window.__PREVIEW_SERVER__).replace(/\/+$/, "") + "/env.js";
+      const frame = document.getElementById("componentsFrame");
+
+      const statusEl = document.getElementById("componentsStatus");
+      const statusTextEl = document.getElementById("componentsStatusText");
+
+      if (!frame) {
+        console.error("[preview] componentsFrame not found");
+        return;
+      }
+
+      const normalize = (s) => String(s || "").trim().replace(/\/+$/, "");
+      const isProbablyUrl = (s) => /^https?:\/\//i.test(s);
+
+      let inFlight = false;
+
+      // Last known good base for the iframe (includes _gallery_mode, but not _t cachebuster)
+      let lastUrlNoBust = "";
+      let lastOrigin = "";         // expected origin for READY messages
+
+      let okOnce = false;
+      let failStreak = 0;
+      let retryTimer = null;
+
+      // For each navigation attempt
+      let navId = 0;
+      let readyTimer = null;
+      let gotReadyForNav = false;
+
+      const setStatus = (text, { hidden = false, error = false } = {}) => {
+        if (!statusEl || !statusTextEl) return;
+        statusTextEl.textContent = text;
+        statusEl.classList.toggle("is-hidden", hidden);
+        statusEl.classList.toggle("is-error", error);
+      };
+
+      const clearReadyTimer = () => {
+        if (readyTimer) {
+          clearTimeout(readyTimer);
+          readyTimer = null;
+        }
+      };
+
+      const scheduleRetry = (fn) => {
+        if (retryTimer) return;
+        const delay = Math.min(1000 * (2 ** Math.min(failStreak, 4)), RETRY_BACKOFF_MAX_MS);
+        retryTimer = setTimeout(() => {
+          retryTimer = null;
+          fn();
+        }, delay);
+      };
+
+      const withCacheBust = (url) => {
+        const sep = url.includes("?") ? "&" : "?";
+        return url + sep + "_t=" + Date.now();
+      };
+
+      const forceReload = () => {
+        if (!lastUrlNoBust) return;
+
+        // Mark as not-ready and show status
+        gotReadyForNav = false;
+        setStatus("Components failed to boot — retrying…", { hidden: false, error: true });
+
+        // Blank hop helps some browsers actually re-navigate
+        try { frame.src = "about:blank"; } catch (e) {}
+
+        setTimeout(() => {
+          // Force a real reload even if URL is the same
+          navigate(lastUrlNoBust, { force: true, label: "Reconnecting components…" });
+
+          // Also pull env.js immediately in case the tunnel rotated
+          fetchEnv();
+        }, 50);
+      };
+
+      const startReadyWatchdog = (thisNavId) => {
+        clearReadyTimer();
+        readyTimer = setTimeout(() => {
+          // Only act if this is still the current nav
+          if (thisNavId !== navId) return;
+          if (gotReadyForNav) return;
+
+          failStreak += 1;
+          forceReload();
+          scheduleRetry(forceReload);
+        }, READY_TIMEOUT_MS);
+      };
+
+      const navigate = (urlNoBust, { force = false, label = "Loading components…" } = {}) => {
+        const normalized = normalize(urlNoBust);
+        if (!normalized || !isProbablyUrl(normalized)) return false;
+
+        if (!force && normalized === lastUrlNoBust) return true;
+        lastUrlNoBust = normalized;
+
+        // Update expected origin for READY messages
+        try {
+          lastOrigin = new URL(normalized).origin;
+        } catch (e) {
+          lastOrigin = "";
+        }
+
+        // UI
+        setStatus(label, { hidden: false, error: okOnce });
+
+        // New navigation attempt
+        navId += 1;
+        gotReadyForNav = false;
+
+        // Navigate with cachebuster
+        frame.src = withCacheBust(normalized);
+
+        // Start watchdog: if READY doesn’t arrive, we treat it as broken (502/5xx included)
+        startReadyWatchdog(navId);
+
+        return true;
+      };
+
+      // 🔥 The actual success signal: READY message from inside the iframe
+      window.addEventListener("message", (event) => {
+        const data = event && event.data;
+
+        if (!data || data.type !== "CHOICELY_COMPONENTS_READY") return;
+
+        // If we know the expected origin, enforce it.
+        // (If you use multiple origins/tunnels, this keeps it sane.)
+        if (lastOrigin && event.origin !== lastOrigin) return;
+
+        gotReadyForNav = true;
+        okOnce = true;
+        failStreak = 0;
+
+        clearReadyTimer();
+        setStatus("Loading components…", { hidden: true });
+      });
+
+      // Keep your load/error listeners if you want, but they are not “truth” anymore.
+      frame.addEventListener("error", () => {
+        failStreak += 1;
+        forceReload();
+        scheduleRetry(forceReload);
+      });
+
+      const applyFromEnv = () => {
+        const base = normalize(window.__COMPONENTS_SERVER__);
+        if (!base || !isProbablyUrl(base)) return false;
+
+        const url = base + "?_gallery_mode=preview_list";
+
+        // If we’ve been failing, force reload even if the URL didn’t change,
+        // because tunnel might be “same URL but now healthy” or vice versa.
+        const force = failStreak > 0;
+
+        return navigate(url, {
+          force,
+          label: force ? "Reconnecting components…" : "Loading components…",
+        });
+      };
+
+      const fetchEnv = async () => {
+        if (inFlight) return;
+        inFlight = true;
+
+        if (!okOnce) setStatus("Loading components…", { hidden: false, error: false });
+        else if (failStreak > 0) setStatus("Reconnecting components…", { hidden: false, error: true });
+
+        try {
+          const res = await fetch(envUrl + "?t=" + Date.now(), { cache: "no-store" });
+          if (!res.ok) {
+            failStreak += 1;
+            scheduleRetry(fetchEnv);
+            return;
+          }
+
+          const js = await res.text();
+          try {
+            (0, eval)(js);
+          } catch (e) {
+            failStreak += 1;
+            scheduleRetry(fetchEnv);
+            return;
+          }
+
+          const applied = applyFromEnv();
+          if (!applied) {
+            failStreak += 1;
+            scheduleRetry(fetchEnv);
+          }
+        } catch (e) {
+          failStreak += 1;
+          scheduleRetry(fetchEnv);
+        } finally {
+          inFlight = false;
+        }
+      };
+
+      // start visible until success
+      setStatus("Loading components…", { hidden: false, error: false });
+      fetchEnv();
+      setInterval(fetchEnv, POLL_MS);
+    })();
+</script>
+
+<script>
+    // Sidebar Toggle Logic
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    // Arrow rotation is handled by CSS now
+
+    sidebarToggle.addEventListener('click', () => {
+      sidebar.classList.toggle('collapsed');
+    });
+
+    // Existing Logic
+    const queryParams = new URLSearchParams(window.location.search)
+    const getQueryParam = (name) => queryParams.get(name)
+
+    const wak =
+      window.__CHOICELY_APP_KEY__ && window.__CHOICELY_APP_KEY__ !== '__CHOICELY_APP_KEY__'
+        ? window.__CHOICELY_APP_KEY__
+        : getQueryParam('appKey') || getQueryParam('wak')
+
+    const iframe = document.getElementById('w')
+    const err = document.getElementById('err')
+
+    if (!wak || wak === '__CHOICELY_APP_KEY__') {
+      err.style.display = 'flex'
+      iframe.removeAttribute('src')
+      console.error('Missing App Key. Please check config.js or URL parameters.')
+    } else {
+      iframe.src = 'https://cdn.choicely.com/vx/widget.html?no_cache=true&wak=' + encodeURIComponent(wak)
+    }
+
+    const showQrBtn = document.getElementById('showQr')
+    const qrOverlay = document.getElementById('qrOverlay')
+    const qrImg = document.getElementById('qrImg')
+    const qrStatus = document.getElementById('qrStatus')
+    const qrStatusText = document.getElementById('qrStatusText')
+
+    const setLoading = (text) => {
+      qrStatus.hidden = false
+      qrStatusText.textContent = text
+      qrImg.hidden = true
+    }
+
+    const showImage = () => {
+      qrStatus.hidden = true
+      qrImg.hidden = false
+    }
+
+    const loadQr = () => {
+      setLoading('Loading QR…')
+      const url = './qr.png?t=' + Date.now()
+      qrImg.onload = () => showImage()
+      qrImg.onerror = () => setLoading('Preparing app download...')
+      qrImg.src = url
+    }
+
+    const onKeydown = (e) => {
+      if (e.key === 'Escape') closeQr()
+    }
+
+    const openQr = () => {
+      qrOverlay.setAttribute('aria-hidden', 'false')
+      document.addEventListener('keydown', onKeydown)
+      loadQr()
+    }
+
+    const closeQr = () => {
+      qrOverlay.setAttribute('aria-hidden', 'true')
+      document.removeEventListener('keydown', onKeydown)
+    }
+
+    showQrBtn.addEventListener('click', (e) => {
+      e.preventDefault()
+      openQr()
+    })
+
+    qrOverlay.addEventListener('click', (e) => {
+      const t = e.target
+      if (t && t.getAttribute && t.getAttribute('data-close') === 'true') {
+        closeQr()
+      }
+    })
+
+    // --- Real-time Updates ---
+    class FetchEventSource {
+      constructor(url, { headers = {} } = {}) {
+        this.url = url
+        this.headers = headers
+        this.controller = new AbortController()
+        this.retryCount = 0
+        this.retryTimer = null
+        this.closed = false
+        this.init()
+      }
+
+      _safeCallback(name, event) {
+        if (this[name]) this[name](event)
+      }
+
+      close() {
+        this.closed = true
+        if (this.retryTimer) {
+          clearTimeout(this.retryTimer)
+          this.retryTimer = null
+        }
+        this.controller.abort()
+      }
+
+      _scheduleReconnect() {
+        if (this.closed || this.controller.signal.aborted) return
+        if (this.retryTimer) return
+        const delay = Math.min(1000 * (2 ** this.retryCount), 10000)
+        this.retryCount += 1
+        this.retryTimer = setTimeout(() => {
+          this.retryTimer = null
+          if (this.closed) return
+          this.controller = new AbortController()
+          this.init()
+        }, delay)
+      }
+
+      async init() {
+        try {
+          const response = await fetch(this.url, {
+            headers: this.headers,
+            signal: this.controller.signal,
+          })
+
+          if (!response.ok) {
+            console.warn(`[Preview] Connection failed: ${response.status}`)
+            this._scheduleReconnect()
+            return
+          }
+
+          this.retryCount = 0
+          this._safeCallback('onopen')
+
+          const reader = response.body.getReader()
+          const decoder = new TextDecoder()
+          let buffer = ''
+
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+
+            buffer += decoder.decode(value, { stream: true })
+            const lines = buffer.split('\n')
+            buffer = lines.pop()
+
+            for (let line of lines) {
+              if (line.trim().startsWith('data:')) {
+                const dataStr = line.trim().slice(5).trimStart()
+                try {
+                  const data = JSON.parse(dataStr)
+                  if (data && (data.path || data.data)) {
+                    this._safeCallback('onmessage', { data: JSON.stringify(data) })
+                  }
+                } catch (e) {
+                  console.warn('[Preview] Failed to parse event data:', dataStr, e)
+                }
+              }
+            }
+          }
+
+          this._scheduleReconnect()
+        } catch (e) {
+          if (!this.controller.signal.aborted) {
+            console.warn('[Preview] Listener error:', e)
+            this._scheduleReconnect()
+          }
+        }
+      }
+    }
+
+    const isValidHost = (value) => /^[a-z0-9.-]+(:\d+)?$/i.test(value)
+
+    const startRealtimeListener = (key) => {
+      if (!key || key === '__CHOICELY_APP_KEY__') return
+
+      const host = window.__CHOICELY_REALTIME_SERVER__
+      if (!host || host === '__CHOICELY_REALTIME_SERVER__') {
+        console.error('[Preview] CHOICELY_REALTIME_SERVER is not configured')
+        return
+      }
+      if (!isValidHost(host)) {
+        console.error('[Preview] CHOICELY_REALTIME_SERVER is invalid:', host)
+        return
+      }
+
+      const url = `https://${host}/apps/${key}.json`
+      const eventSource = new FetchEventSource(url, { headers: { Accept: 'text/event-stream' } })
+
+      let reloadTimer = null
+      eventSource.onmessage = () => {
+        if (reloadTimer) return
+        reloadTimer = setTimeout(() => {
+          reloadTimer = null
+          const iframe = document.getElementById('w')
+          if (iframe) {
+            try {
+              const urlObj = new URL(iframe.src)
+              urlObj.searchParams.set('_t', Date.now())
+              iframe.src = urlObj.toString()
+            } catch (e) {
+              console.warn('[Preview] Failed to refresh iframe URL:', e)
+            }
+          }
+        }, 250)
+      }
+    }
+
+    if (wak && wak !== '__CHOICELY_APP_KEY__') {
+      startRealtimeListener(wak)
+    }
+
+    const pushBtn = document.getElementById('pushChanges')
+
+    const hostTunnel =
+      window.__PREVIEW_SERVER__ &&
+        window.__PREVIEW_SERVER__ !== '__PREVIEW_SERVER__'
+        ? String(window.__PREVIEW_SERVER__)
+        : null
+
+    const previewToken =
+      window.__PREVIEW_TOKEN__ &&
+        window.__PREVIEW_TOKEN__ !== '__PREVIEW_TOKEN__'
+        ? String(window.__PREVIEW_TOKEN__)
+        : null
+
+    const getReleaseBase = () => {
+      if (!hostTunnel) {
+        throw new Error('__PREVIEW_SERVER__ is missing (config.js placeholder or not generated)')
+      }
+      // normalize: require scheme, strip trailing slashes
+      const base = hostTunnel.trim()
+      if (!/^https?:\/\//i.test(base)) {
+        throw new Error('__PREVIEW_SERVER__ must include scheme, e.g. https://xyz.trycloudflare.com')
+      }
+      return base.replace(/\/+$/, '')
+    }
+
+    const setBtnState = (text, disabled, { error = false } = {}) => {
+      pushBtn.textContent = text
+      pushBtn.setAttribute('aria-disabled', disabled ? 'true' : 'false')
+      pushBtn.style.pointerEvents = disabled ? 'none' : 'auto'
+      pushBtn.style.opacity = disabled ? '0.8' : '1'
+
+      // error styling
+      pushBtn.classList.toggle('is-error', error)
+    }
+
+    const pushChanges = async () => {
+      const PUSH_TIMEOUT_MS = 10 * 60 * 1000 // 10 minutes
+
+      try {
+        setBtnState('Pushing…', true, { error: false })
+
+        const url = `${getReleaseBase()}/__release`
+
+        const headers = { 'Content-Type': 'application/json' }
+        if (previewToken) headers['X-Preview-Token'] = previewToken
+
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), PUSH_TIMEOUT_MS)
+
+        let res
+        try {
+          res = await fetch(url, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({}),
+            signal: controller.signal,
+          })
+        } finally {
+          clearTimeout(timeoutId)
+        }
+
+        if (!res.ok) {
+          const text = await res.text().catch(() => '')
+          throw new Error(`Release failed (${res.status}). ${text}`.trim())
+        }
+
+        setBtnState('Pushed', true, { error: false })
+        setTimeout(() => setBtnState('Push changes to app', false, { error: false }), 1400)
+      } catch (e) {
+        const isTimeout =
+          e && (e.name === 'AbortError' || String(e).toLowerCase().includes('abort'))
+
+        console.error('[Preview] Push failed:', e)
+        setBtnState(isTimeout ? 'Push timed out — retry' : 'Push failed — retry', false, { error: true })
+      }
+    }
+
+    pushBtn.addEventListener('click', (e) => {
+      e.preventDefault()
+      pushChanges()
+    })
+</script>
+</body>
+
+</html>

@@ -1,0 +1,22 @@
+{
+  "name": "Choicely",
+  "description": "Create cross-platform native apps.",
+  "categories": ["Mobile"],
+  "publisher": "https://www.choicely.com",
+  "icon": "https://raw.githubusercontent.com/choicely/firebase-studio-template/refs/heads/main/.idx/icon.png",
+  "params": [
+    {
+      "id": "app_key",
+      "name": "Choicely App Key",
+      "type": "text",
+      "default": "Y2hvaWNlbHktZXUvYXBwcy9mY3Zud1hpUGVDemFFcGNVSzBreA",
+      "required": true
+    },
+    {
+      "id": "api_key",
+      "name": "Choicely Api Key",
+      "type": "text",
+      "required": false
+    }
+  ]
+}

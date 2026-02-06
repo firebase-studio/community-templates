@@ -1,0 +1,11 @@
+{
+  "ignore_dirs": [
+      ".git",
+      ".cache",
+      "build",
+      "dist",
+      "scratch",
+      "scripts",
+      "out"
+  ]
+}
