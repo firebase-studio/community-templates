@@ -11,7 +11,7 @@
   "dependencies": {
     "@genkit-ai/googleai": "^1.1.0",
     "genkit": "^1.1.0",
-    "markdown-it": "^13.0.2",
+    "markdown-it": "^14.1.1",
     "next": "15.4.9",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
